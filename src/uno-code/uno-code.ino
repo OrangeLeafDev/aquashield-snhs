@@ -47,6 +47,7 @@ void processUART(String command) {
   command.trim();
   if (command == "CHECK") {
     espSerial.println("ONLINE");
+    Serial.println("Pinged by ESP32");
   }
 }
 
@@ -73,7 +74,7 @@ void setup() {
   // Ultrasonic Setup
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  Serial.println("Arduino Uno Ready. Type a message below to send to ESP32:");
+  Serial.println("Arduino Uno Ready.");
 }
 
 void loop() {
@@ -95,10 +96,13 @@ void loop() {
   }
   // Post
   if (millis() - lastPost >= TIMEOUT) {
+    lastPost = millis();
     String json_data = "{";
     json_data += "\"distance\":" + String(distance, 1) + ",";
     json_data += "\"water\":" + String(water) + ",";
-    json_data += "\"motor\":" + String(motorRunning ? 1 : 0) + ",";
-    espSerial.print(json_data);
+    json_data += "\"motor\":" + String(motorRunning ? 1 : 0);
+    json_data += "}";
+    espSerial.println(json_data);
+    Serial.println("Sending data to ESP32");
   }
 }
