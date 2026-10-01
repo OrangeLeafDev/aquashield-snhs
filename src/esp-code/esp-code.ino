@@ -2,8 +2,8 @@
 #include <WebServer.h>
 
 // Replace SSID and pw with the AP you want it to connect to
-const char* ssid = "OLSN-AP";
-const char* password = "12340987qwerpoiu";
+const char* ssid = "[redacted]";
+const char* password = "[redacted]";
 // Networking setup
 WebServer server(80);
 // !!! Configure these to match the network you'll connect to
