@@ -2,8 +2,8 @@
 #include <WebServer.h>
 
 // Replace SSID and pw with the AP you want it to connect to
-const char* ssid = "YOUR_WIFI";
-const char* password = "YOUR_PASSWORD";
+const char* ssid = "OLSN-AP";
+const char* password = "12340987qwerpoiu";
 // Networking setup
 WebServer server(80);
 // !!! Configure these to match the network you'll connect to
@@ -19,7 +19,17 @@ String uartBuffer;
 // Data
 String distance = "-1";
 String water = "0";
+String previous_water = "0";
 String motor = "0";
+String latest_status = "N/A";
+bool isonline = false;
+
+// Ping
+const unsigned long PING_INTERVAL = 2000;
+const unsigned long PING_TIMEOUT = 500;
+unsigned long lastPing = 0;
+unsigned long pingSent = 0;
+bool waitingForPing = false;
 
 void processUNO(String data) {
   data.trim();
@@ -28,6 +38,8 @@ void processUNO(String data) {
   // Status check
   if (data == "ONLINE") {
     Serial.println("UNO is online.");
+    isonline = true;
+    waitingForPing = false;
     return;
   }
   // Parses JSON
@@ -42,6 +54,30 @@ void processUNO(String data) {
     if (p >= 0) {
       p += 8;
       water = data.substring(p, data.indexOf(',', p));
+
+      float currentWater = water.toFloat();
+      float previousWater = previous_water.toFloat();
+
+      if (currentWater >= previousWater) {
+        if (currentWater < 5.0)
+          latest_status = "Normal condition";
+        else if (currentWater <= 9.9)
+          latest_status = "Level 1";
+        else if (currentWater <= 14.9)
+          latest_status = "Level 2";
+        else
+          latest_status = "Level 3";
+      }
+      else {
+        if (previousWater > 10.0 && currentWater <= 10.0)
+          latest_status = "Level decrease";
+        else if (previousWater > 5.0 && currentWater <= 5.0)
+          latest_status = "Level decrease";
+        else if (currentWater < 5.0)
+          latest_status = "Normal condition";
+      }
+
+      previous_water = water;
     }
     p = data.indexOf("\"motor\":");
     if (p >= 0) {
@@ -66,14 +102,32 @@ void uartIO() {
 }
 
 void sendUNO(String command) {
-    unoSerial.println(command);
+  unoSerial.println(command);
+}
+
+void checkUNO() {
+  if (!waitingForPing && millis() - lastPing >= PING_INTERVAL) {
+    sendUNO("CHECK");
+    pingSent = millis();
+    lastPing = millis();
+    waitingForPing = true;
+    isonline = false;
+  }
+
+  if (waitingForPing && millis() - pingSent >= PING_TIMEOUT) {
+    isonline = false;
+    waitingForPing = false;
+    Serial.println("UNO is offline.");
+  }
 }
 
 void handleData() {
   String json = "{";
   json += "\"distance\":" + distance + ",";
   json += "\"water\":" + water + ",";
-  json += "\"motor\":" + motor;
+  json += "\"isonline\":" + String(isonline ? 1 : 0) + ",";
+  json += "\"motor\":" + motor + ",";
+  json += "\"status\":\"" + latest_status + "\"";
   json += "}";
 
   server.send(200, "application/json", json);
@@ -124,5 +178,6 @@ void setup() {
 
 void loop() {
   uartIO();
+  checkUNO();
   server.handleClient();
 }
