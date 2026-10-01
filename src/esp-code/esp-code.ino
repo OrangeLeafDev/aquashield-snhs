@@ -13,8 +13,8 @@ IPAddress subnet(255, 255, 255, 0);
 // Serial Setup
 HardwareSerial unoSerial(2);
 // UART
-const int RX2 = 16;
-const int TX2 = 17;
+const int unoRX = 16;
+const int unoTX = 17;
 String uartBuffer;
 // Data
 String distance = "-1";
@@ -105,7 +105,7 @@ void setup() {
   // Serial debugging setup
   Serial.begin(115200);
   // UART for uno setup
-  unoSerial.begin(9600, SERIAL_8N1, RX2, TX2);
+  unoSerial.begin(9600, SERIAL_8N1, unoRX, unoTX);
   // Internet setup
   WiFi.config(local_IP, gateway, subnet);
   WiFi.begin(ssid, password);
